@@ -75,6 +75,7 @@ async function main() {
   let sectionName = null;
   let sectionDescription = null;
   let lessonEntries = [];
+
   for (const directory of directories) {
     console.log("\nProcessing directory: ", directory);
 
@@ -89,17 +90,24 @@ async function main() {
     console.log("    Found lesson content:", lessonContentPath);
     console.log("    Found file paths:", filePaths);
 
-    const lessonContent = fs.readFileSync(lessonContentPath, "utf-8");
-    if (lessonContentPath.includes("/section/")) {
+    let lessonContent = null;
+    if (lessonContentPath && fs.existsSync(lessonContentPath)) {
+      lessonContent = fs.readFileSync(lessonContentPath, "utf-8");
+    } else {
+      console.warn(
+        "    Warning: Lesson content path not found or does not exist:",
+        lessonContentPath
+      );
+    }
+
+    if (lessonContent && lessonContentPath.includes("/section/")) {
       console.log("\nProcessing section: ", lessonContentPath);
 
       if (lessonEntries.length > 0) {
         console.log("\nCreating section entry:", lessonContentPath);
         const sectionEntry = await environment.createEntry("section", {
           fields: {
-            title: {
-              "en-US": sectionName,
-            },
+            title: { "en-US": sectionName },
             description: {
               "en-US": sectionDescription
                 .map((str) => Buffer.from(str).toString("utf-8"))
@@ -113,15 +121,24 @@ async function main() {
           },
         });
         await sectionEntry.publish();
+
         // Reset the lesson entries
         lessonEntries = [];
       }
+
       sectionName = lessonContent.match(/# (.*?)\n/)[1];
-      sectionDescription = lessonContent.match(/# .*?\n\n([\s\S]*?)(?=\n#|$)/);
+      const sectionDescriptionMatch = lessonContent.match(
+        /# .*?\n\n([\s\S]*?)(?=\n#|$)/
+      );
+      sectionDescription = sectionDescriptionMatch
+        ? sectionDescriptionMatch[1].split("\n")
+        : [];
     } else {
-      const sourceAssets = [];
-      const templateAssets = [];
-      const solutionAssets = [];
+      const assets = {
+        source: [],
+        template: [],
+        solution: [],
+      };
 
       console.log("⬆️ Uploading files from", directory);
       for (const filePath of filePaths) {
@@ -133,18 +150,20 @@ async function main() {
           const splitPath = relativePath.split(path.sep);
           const finalPath = slice(splitPath, 1, splitPath.length).join("/");
 
-          console.log("    Uploading file:", finalPath);
+          // Check if file is empty
+          const fileStats = fs.statSync(filePath);
+          if (fileStats.size === 0) {
+            console.warn(`File is empty, skipping upload: ${filePath}`);
+            continue;
+          }
+          console.info("    Uploading file:", finalPath);
 
           const fileContent = fs.readFileSync(filePath, "utf-8");
-          const upload = await environment.createUpload({
-            file: fileContent,
-          });
+          const upload = await environment.createUpload({ file: fileContent });
 
           const asset = await environment.createAsset({
             fields: {
-              title: {
-                "en-US": finalPath,
-              },
+              title: { "en-US": finalPath },
               file: {
                 "en-US": {
                   contentType: "text/plain",
@@ -161,7 +180,7 @@ async function main() {
             },
           });
 
-          console.log("    Publishing asset", path.dirname(filePath), filePath);
+          console.info("    Publishing asset", path.dirname(filePath), filePath);
 
           await asset.processForAllLocales();
           const latestAsset = await environment.getAsset(asset.sys.id);
@@ -173,11 +192,11 @@ async function main() {
           };
 
           if (filePath.includes("/source/")) {
-            sourceAssets.push(assetLink);
+            assets.source.push(assetLink);
           } else if (filePath.includes("/template/")) {
-            templateAssets.push(assetLink);
+            assets.template.push(assetLink);
           } else if (filePath.includes("/solution/")) {
-            solutionAssets.push(assetLink);
+            assets.solution.push(assetLink);
           }
         }
       }
@@ -186,33 +205,26 @@ async function main() {
       console.log("\nCreating lesson entry", directory);
       const filesEntry = await environment.createEntry("files", {
         fields: {
-          title: {
-            "en-US": parentDir + "/" + directory,
-          },
-          source: {
-            "en-US": sourceAssets,
-          },
-          template: {
-            "en-US": templateAssets,
-          },
-          solution: {
-            "en-US": solutionAssets,
-          },
+          title: { "en-US": parentDir + "/" + directory },
+          source: { "en-US": assets.source },
+          template: { "en-US": assets.template },
+          solution: { "en-US": assets.solution },
         },
       });
 
       console.log("\nPublishing lesson entry for:", directory);
 
-      const latestFilesEntry = await environment.getEntry(filesEntry.sys.id);
-      await latestFilesEntry.publish();
+      await filesEntry.publish();
 
       const lessonEntry = await environment.createEntry("lesson", {
         fields: {
           lessonName: {
-            "en-US": lessonContent.match(/# (.*?)\n/)[1],
+            "en-US": lessonContent
+              ? lessonContent.match(/# (.*?)\n/)[1]
+              : `Lesson ${directory}`,
           },
           lessonContent: {
-            "en-US": lessonContent,
+            "en-US": lessonContent ? lessonContent : "No content available.",
           },
           lessonDescription: {
             "en-US":
@@ -225,15 +237,15 @@ async function main() {
           },
         },
       });
-      const latestLessonEntry = await environment.getEntry(lessonEntry.sys.id);
-      await latestLessonEntry.publish();
 
-      lessonEntries.push(latestLessonEntry);
+      await lessonEntry.publish();
+      lessonEntries.push(lessonEntry);
     }
 
     console.log("✅ Finished processing directory", directory);
     index++;
   }
+
   if (lessonEntries.length > 0) {
     console.log(
       "\n\n\nHERE\n\n\n",
@@ -241,11 +253,10 @@ async function main() {
       sectionDescription,
       lessonEntries
     );
+
     const sectionEntry = await environment.createEntry("section", {
       fields: {
-        title: {
-          "en-US": sectionName,
-        },
+        title: { "en-US": sectionName },
         description: {
           "en-US": sectionDescription
             .map((str) => Buffer.from(str).toString("utf-8"))
@@ -258,6 +269,7 @@ async function main() {
         },
       },
     });
+
     await sectionEntry.publish();
   }
 }
