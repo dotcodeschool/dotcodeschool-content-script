@@ -63,7 +63,14 @@ async function main() {
   const environment = await getEnvironment(client);
   console.log("✅ Got environment");
 
-  const _directories = fs.readdirSync(parentDir);
+  console.info("🔍 Reading directories from", parentDir);
+  const _directories = fs.readdirSync(parentDir).filter((directory) => {
+    // make sure _sidebar.md is not included
+    return directory !== "_sidebar.md";
+  });
+  for (const directory of _directories) {
+    console.log("┗ 📁", directory);
+  }
   console.log("✅ Got directories");
   const directories = sortBy(_directories, (directory) => parseInt(directory));
   console.log("✅ Sorted directories");
