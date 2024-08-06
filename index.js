@@ -64,6 +64,7 @@ simpleGit().clone(repoUrl, sourcePath, (err, _) => {
     const isSolution = commitMessage.toLowerCase().startsWith("solution: ");
     const isSection = commitMessage.toLowerCase().startsWith("section: ");
     const isAction = commitMessage.toLowerCase().startsWith("action: ");
+    const isStartingTemplate = commitMessage.toLowerCase().startsWith("starting-template");
 
     let stepFolder = path.join(repoPath, stepCounter.toString());
     if (!fs.existsSync(stepFolder)) {
@@ -77,6 +78,11 @@ simpleGit().clone(repoUrl, sourcePath, (err, _) => {
 
     // Default assumption is output is not a template or solution
     let outputFolder = sourceFolder;
+    
+   	// We skip the starting template commit since it is only used for starting the project.
+		if (isStartingTemplate) {
+      return;
+		}
 
     if (isSection) {
       outputFolder = sectionFolder;
