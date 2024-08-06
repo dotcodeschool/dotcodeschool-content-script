@@ -2,4 +2,6 @@ node_modules
 rust-state-machine
 polkadot-sdk-tutorial-dex
 polkadot-sdk-workshop-xcm
+blockchain-from-scratch
+substrate-collectables-workshop
 .env
