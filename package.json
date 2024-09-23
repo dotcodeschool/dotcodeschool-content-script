@@ -12,6 +12,6 @@
   },
   "scripts": {
     "start": "node index.js",
-    "script": "node script.js"
+    "upload": "node script.js"
   }
 }
