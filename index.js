@@ -5,6 +5,8 @@ const path = require("path");
 
 const repoUrl = process.argv[2];
 
+const EXCLUDE_FILES = ['bun.lockb', '*.scale']
+
 if (!repoUrl) {
   console.error(
     "Please provide a GitHub repository URL as a command-line argument."
@@ -128,7 +130,11 @@ simpleGit().clone(repoUrl, sourcePath, (err, _) => {
     // Sanitize outputFolder
     const sanitizedOutputFolder = outputFolder.toString().replace(/ /g, "\\ ");
     // Copy the contents to the commit folder
-    execSync(`cp -r ${sanitizedSourcePath}/* ${sanitizedOutputFolder}`);
+    execSync(
+      `rsync -a ${EXCLUDE_FILES.map((file) => `--exclude='${file}'`).join(
+        " "
+      )} ${sanitizedSourcePath}/ ${sanitizedOutputFolder}`
+    );
     console.log(`Contents of commit ${index} copied to ${sanitizedOutputFolder}`);
 
     let diffOutput = "";
@@ -271,6 +277,14 @@ function generateFileMarkdown(type, files) {
   let output = "";
   for (file of files) {
     if (!file.file) {
+      continue;
+    }
+
+    // Check if file matches any exclusion pattern
+    if (EXCLUDE_FILES.some(pattern => {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      return regex.test(file.file);
+    })) {
       continue;
     }
 
