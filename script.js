@@ -225,17 +225,16 @@ async function main() {
 
       const lessonEntry = await environment.createEntry("lesson", {
         fields: {
-          lessonName: {
+          title: {
             "en-US": lessonContent
               ? lessonContent.match(/# (.*?)\n/)[1]
               : `Lesson ${directory}`,
           },
-          lessonContent: {
+          content: {
             "en-US": lessonContent ? lessonContent : "No content available.",
           },
-          lessonDescription: {
-            "en-US":
-              "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec auctor, nisl eget ultricies ultrices, nunc nisl aliquam nunc, vitae aliquam nisl nunc nec nisl.",
+          description: {
+            "en-US": `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec auctor, nisl eget ultricies ultrices, nunc nisl aliquam nunc, vitae aliquam nisl nunc nec nisl.`,
           },
           files: {
             "en-US": {
