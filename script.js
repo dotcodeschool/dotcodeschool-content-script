@@ -233,9 +233,9 @@ async function main() {
           content: {
             "en-US": lessonContent ? lessonContent : "No content available.",
           },
-          description: {
-            "en-US": `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec auctor, nisl eget ultricies ultrices, nunc nisl aliquam nunc, vitae aliquam nisl nunc nec nisl.`,
-          },
+          // description: {
+          //   "en-US": `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec auctor, nisl eget ultricies ultrices, nunc nisl aliquam nunc, vitae aliquam nisl nunc nec nisl.`,
+          // },
           files: {
             "en-US": {
               sys: { type: "Link", linkType: "Entry", id: filesEntry.sys.id },
